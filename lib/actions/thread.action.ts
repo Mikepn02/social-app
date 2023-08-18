@@ -1,4 +1,4 @@
-"use server"
+ "use server"
 import { connectToDB } from "../mongoose"
 import Thread from "../models/thread.model"
 import User from "../models/user.model"
@@ -53,4 +53,73 @@ export async function fetchPosts(pageNumber=1,pageSize=20){
     const isNext = totalPostsCount > skipAmount + posts.length;
 
     return {posts , isNext}
+  }
+
+
+  export async function fetchThreadById(id: string) {
+   connectToDB();
+   try{
+      const thread = await Thread.findById(id)
+      .populate({
+         path:"author",
+         model:User,
+         select:"_id id name image"
+      })
+      .populate({
+         path:'children',
+         populate: [
+            {
+               path: 'author',
+               model: User,
+               select:"_id id name parentId image"
+            },
+            {
+               path: 'children',
+               model:Thread,
+               populate: {
+                  path:"author",
+                  model: User,
+                  select:"_id id name parentId image"
+               }
+            }
+           ]
+
+      }).exec()
+      return thread;
+   }catch(error : any) {
+      throw new Error(`Error fetching thread: ${error}`)
+   }
+  }
+
+  export async function addCommentToThread(
+   threadId: string,
+   commentText:string,
+   userId:string,
+   path:string
+  ) {
+   connectToDB()
+     
+      try{
+          
+         //finding original thread
+
+         const originalThread  = await Thread.findById(threadId)
+
+         if(!originalThread){
+            throw new Error("Thread no found")
+         }
+         const commentThread = new Thread({
+            text:commentText,
+            author:userId,
+            parentId:threadId
+         })
+         const savedCommentThread = await commentThread.save()
+         originalThread.children.push(savedCommentThread._id);
+
+         await originalThread.save()
+         revalidatePath(path)
+
+      }catch(error : any) {
+         console.log(`Failed to add comment: ${error.message}`)
+      }
   }
