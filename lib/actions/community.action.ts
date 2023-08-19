@@ -7,73 +7,70 @@ import Thread from "../models/thread.model";
 import User from "../models/user.model";
 
 import { connectToDB } from "../mongoose";
-import { NextApiResponse } from "next";
 
 export async function createCommunity(
-    id: string,
-    name: string,
-    username: string,
-    image: string,
-    bio: string,
-    createdById: string,
-    res: NextApiResponse
-  ) {
-    try {
-      connectToDB();
-  
-      const user = await User.findOne({ id: createdById });
-  
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      const newCommunity = new Community({
-        id,
-        name,
-        username,
-        image,
-        bio,
-        createdBy: user._id,
-      });
-  
-      const createdCommunity = await newCommunity.save();
-  
-      user.communities.push(createdCommunity._id);
-      await user.save();
-  
-      res.status(201).json({ message: 'Community created successfully', community: createdCommunity });
-    } catch (error: any) {
-      console.error('Error creating community:', error);
-      res.status(500).json({ error: `Error creating community: ${error.message}` });
-    }
-  }
-  
+  id: string,
+  name: string,
+  username: string,
+  image: string,
+  bio: string,
+  createdById: string // Change the parameter name to reflect it's an id
+) {
+  try {
+    connectToDB();
 
-  export async function fetchCommunityDetails(id: string, res: NextApiResponse) {
-    try {
-      connectToDB();
-  
-      const communityDetails = await Community.findOne({ id }).populate([
-        'createdBy',
-        {
-          path: 'members',
-          model: User,
-          select: 'name username image _id id',
-        },
-      ]);
-  
-      if (!communityDetails) {
-        return res.status(404).json({ error: 'Community not found' });
-      }
-  
-      res.status(200).json({ community: communityDetails });
-    } catch (error: any) {
-      console.error('Error fetching community details:', error);
-      res.status(500).json({ error: `Error fetching community details: ${error.message}` });
-    }
-  }
+    // Find the user with the provided unique id
+    const user = await User.findOne({ id: createdById });
 
-export async function fetchCommunityPosts(id: string , res:NextApiResponse) {
+    if (!user) {
+      throw new Error("User not found"); // Handle the case if the user with the id is not found
+    }
+
+    const newCommunity = new Community({
+      id,
+      name,
+      username,
+      image,
+      bio,
+      createdBy: user._id, // Use the mongoose ID of the user
+    });
+
+    const createdCommunity = await newCommunity.save();
+
+    // Update User model
+    user.communities.push(createdCommunity._id);
+    await user.save();
+
+    return createdCommunity;
+  } catch (error) {
+    // Handle any errors
+    console.error("Error creating community:", error);
+    throw error;
+  }
+}
+
+export async function fetchCommunityDetails(id: string) {
+  try {
+    connectToDB();
+
+    const communityDetails = await Community.findOne({ id }).populate([
+      "createdBy",
+      {
+        path: "members",
+        model: User,
+        select: "name username image _id id",
+      },
+    ]);
+
+    return communityDetails;
+  } catch (error) {
+    // Handle any errors
+    console.error("Error fetching community details:", error);
+    throw error;
+  }
+}
+
+export async function fetchCommunityPosts(id: string) {
   try {
     connectToDB();
 
@@ -98,12 +95,11 @@ export async function fetchCommunityPosts(id: string , res:NextApiResponse) {
       ],
     });
 
-    res.status(200).json({community: communityPosts})
-
-  } catch (error : any) {
+    return communityPosts;
+  } catch (error) {
     // Handle any errors
     console.error("Error fetching community posts:", error);
-      res.status(500).json({ error: `Error fetching community details: ${error.message}` });
+    throw error;
   }
 }
 
@@ -112,13 +108,11 @@ export async function fetchCommunities({
   pageNumber = 1,
   pageSize = 20,
   sortBy = "desc",
-  res
 }: {
   searchString?: string;
   pageNumber?: number;
   pageSize?: number;
   sortBy?: SortOrder;
-  res:NextApiResponse
 }) {
   try {
     connectToDB();
@@ -158,17 +152,16 @@ export async function fetchCommunities({
     // Check if there are more communities beyond the current page.
     const isNext = totalCommunitiesCount > skipAmount + communities.length;
 
-    res.status(200).json({communities , isNext})
-  } catch (error: any) {
+    return { communities, isNext };
+  } catch (error) {
     console.error("Error fetching communities:", error);
-    res.status(500).json({ error: `Error fetching community: ${error.message}` });
+    throw error;
   }
 }
 
 export async function addMemberToCommunity(
   communityId: string,
-  memberId: string,
-  res: NextApiResponse
+  memberId: string
 ) {
   try {
     connectToDB();
@@ -200,19 +193,17 @@ export async function addMemberToCommunity(
     user.communities.push(community._id);
     await user.save();
 
-
-    res.status(201).json(community)
-  } catch (error: any) {
+    return community;
+  } catch (error) {
     // Handle any errors
     console.error("Error adding member to community:", error);
-    res.status(500).json({ error: `Error adding member in community: ${error.message}` });
+    throw error;
   }
 }
 
 export async function removeUserFromCommunity(
   userId: string,
-  communityId: string,
-  res: NextApiResponse
+  communityId: string
 ) {
   try {
     connectToDB();
@@ -243,11 +234,11 @@ export async function removeUserFromCommunity(
       { $pull: { communities: communityIdObject._id } }
     );
 
-    res.status(200).json({success: true})
-  } catch (error:any) {
+    return { success: true };
+  } catch (error) {
     // Handle any errors
     console.error("Error removing user from community:", error);
-    res.status(500).json({ error: `Error removing community: ${error.message}` });
+    throw error;
   }
 }
 
@@ -255,8 +246,7 @@ export async function updateCommunityInfo(
   communityId: string,
   name: string,
   username: string,
-  image: string,
-  res:NextApiResponse
+  image: string
 ) {
   try {
     connectToDB();
@@ -270,15 +260,16 @@ export async function updateCommunityInfo(
     if (!updatedCommunity) {
       throw new Error("Community not found");
     }
-    res.status(200).json(updatedCommunity)
-  } catch (error:any) {
+
+    return updatedCommunity;
+  } catch (error) {
     // Handle any errors
     console.error("Error updating community information:", error);
-    res.status(500).json({ error: `Error updating community: ${error.message}` });
+    throw error;
   }
 }
 
-export async function deleteCommunity(communityId: string,res:NextApiResponse) {
+export async function deleteCommunity(communityId: string) {
   try {
     connectToDB();
 
@@ -305,9 +296,9 @@ export async function deleteCommunity(communityId: string,res:NextApiResponse) {
 
     await Promise.all(updateUserPromises);
 
-    res.status(200).json(deleteCommunity)
-  } catch (error: any) {
+    return deletedCommunity;
+  } catch (error) {
     console.error("Error deleting community: ", error);
-    res.status(500).json({ error: `Error deleting community: ${error.message}` });
+    throw error;
   }
 }
