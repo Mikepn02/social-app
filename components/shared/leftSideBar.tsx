@@ -3,18 +3,22 @@ import { sidebarLinks } from '@/constants'
 import Link from 'next/link'
 import Image from 'next/image'
 import {  usePathname , useRouter} from 'next/navigation'
-import { SignedIn ,SignOutButton} from '@clerk/nextjs'
+import { SignedIn ,SignOutButton ,useAuth} from '@clerk/nextjs'
 
 
 
 function LeftSideBar () {
     const router = useRouter()
     const pathname = usePathname()
+    const {userId} = useAuth()
     return (
         <section className="custom-scrollbar leftsidebar">
              <div className="flex w-full flex-1 flex-col gap-6 px-6">
                  {sidebarLinks.map((link) => {
+                     // Determine if the link is active based on the current page's URL
                     const isActive = (pathname.includes(link.route) && link.route.length> 1 || pathname === link.route )
+                      // Modify the "Profile" link's route to include the userId
+                    if(link.route === '/profile') link.route = `${link.route}/${userId}`
                  return(
                     <div>
                      <Link href={link.route}

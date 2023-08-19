@@ -123,3 +123,33 @@ export async function fetchPosts(pageNumber=1,pageSize=20){
          console.log(`Failed to add comment: ${error.message}`)
       }
   }
+
+export async function fetchUserPosts(userId:string) {
+    try{
+      connectToDB()
+
+      // all threads authored by user
+
+      // Populate the community
+
+      const threads = await  User.findOne({id: userId})
+      .populate({
+         path:'threads',
+         model:Thread,
+         populate:{
+            path:'children',
+            model:Thread,
+            populate:{
+               path:  'author',
+               model:'User',
+               select:"name image id"
+            }
+         }
+      })
+
+      return threads
+
+    }catch(error: any) {
+         throw new Error(`Failed to fetch the user: ${error.message}`)
+    }
+}

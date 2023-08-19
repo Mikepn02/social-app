@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import ProfileHeader from "@/components/shared/ProfileHeader"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
+import ThreadsTab from "@/components/shared/ThreadsTab"
 import { profileTabs } from "@/constants"
 
 const Page = async ({ params }: { params: { id: string } }) => {
@@ -12,7 +13,7 @@ const Page = async ({ params }: { params: { id: string } }) => {
     const user = await currentUser()
     if (!user) return null
     const userInfo = await fetchUser(params.id)
-    if (!userInfo.onboarded) redirect('/onboarding')
+    if (!userInfo?.onboarded) redirect('/onboarding')
     return (
         <section>
             <ProfileHeader
@@ -47,7 +48,7 @@ const Page = async ({ params }: { params: { id: string } }) => {
                         <ThreadsTab 
                         currentUserId={user.id}
                         accountId={userInfo.id}
-                        accountType-"User"
+                        accountType="User"
                         />
                     </TabsContent>
                   ))}
