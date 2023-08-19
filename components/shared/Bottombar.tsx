@@ -11,7 +11,6 @@ function Bottombar () {
             {sidebarLinks.map((link) => {
                     const isActive = (pathname.includes(link.route) && link.route.length> 1 || pathname === link.route )
                  return(
-                    <div>
                      <Link href={link.route}
                       key={link.label}
                       className={`bottombar_link ${isActive && 'bg-primary-500'}`}
@@ -26,7 +25,6 @@ function Bottombar () {
                             {link.label.split(/\s+/)[0]}
                         </p>
                      </Link>
-                    </div>
                  )})}
             </div>
         </section>
