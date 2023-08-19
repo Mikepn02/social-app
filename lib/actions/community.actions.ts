@@ -7,6 +7,7 @@ import Thread from "../models/thread.model";
 import User from "../models/user.model";
 
 import { connectToDB } from "../mongoose";
+import { NextApiResponse } from "next";
 
 export async function createCommunity(
   id: string,
@@ -14,7 +15,8 @@ export async function createCommunity(
   username: string,
   image: string,
   bio: string,
-  createdById: string // Change the parameter name to reflect it's an id
+  createdById: string, // Change the parameter name to reflect it's an id
+  res:NextApiResponse
 ) {
   try {
     connectToDB();
@@ -41,15 +43,15 @@ export async function createCommunity(
     user.communities.push(createdCommunity._id);
     await user.save();
 
-    return createdCommunity;
+    return res.status(200).json(createCommunity);
   } catch (error) {
     // Handle any errors
     console.error("Error creating community:", error);
-    throw error;
+    return res.status(500).json({ success: false, message: 'Failed to create community' });
   }
 }
 
-export async function fetchCommunityDetails(id: string) {
+export async function fetchCommunityDetails(id: string,res:NextApiResponse) {
   try {
     connectToDB();
 
@@ -63,14 +65,15 @@ export async function fetchCommunityDetails(id: string) {
     ]);
 
     return communityDetails;
+    return res.status(200).json(communityDetails);
   } catch (error) {
     // Handle any errors
     console.error("Error fetching community details:", error);
-    throw error;
+    return res.status(500).json({ success: false, message: 'Failed to details in community' });
   }
 }
 
-export async function fetchCommunityPosts(id: string) {
+export async function fetchCommunityPosts(id: string,res:NextApiResponse) {
   try {
     connectToDB();
 
@@ -94,12 +97,11 @@ export async function fetchCommunityPosts(id: string) {
         },
       ],
     });
-
-    return communityPosts;
+    return res.status(200).json(communityPosts);
   } catch (error) {
     // Handle any errors
     console.error("Error fetching community posts:", error);
-    throw error;
+    return res.status(500).json({ success: false, message: 'Failed to posts in community' });
   }
 }
 
@@ -108,11 +110,13 @@ export async function fetchCommunities({
   pageNumber = 1,
   pageSize = 20,
   sortBy = "desc",
+  res
 }: {
   searchString?: string;
   pageNumber?: number;
   pageSize?: number;
   sortBy?: SortOrder;
+  res:NextApiResponse
 }) {
   try {
     connectToDB();
@@ -153,15 +157,17 @@ export async function fetchCommunities({
     const isNext = totalCommunitiesCount > skipAmount + communities.length;
 
     return { communities, isNext };
+    return res.status(200).json({communities,isNext});
   } catch (error) {
     console.error("Error fetching communities:", error);
-    throw error;
+    return res.status(500).json({ success: false, message: 'Failed to fetch community' });
   }
 }
 
 export async function addMemberToCommunity(
   communityId: string,
-  memberId: string
+  memberId: string,
+  res:NextApiResponse
 ) {
   try {
     connectToDB();
@@ -193,17 +199,18 @@ export async function addMemberToCommunity(
     user.communities.push(community._id);
     await user.save();
 
-    return community;
+    return res.status(201).json(community);
   } catch (error) {
     // Handle any errors
     console.error("Error adding member to community:", error);
-    throw error;
+    return res.status(500).json({ success: false, message: 'Failed to addcommunity' });
   }
 }
 
 export async function removeUserFromCommunity(
   userId: string,
-  communityId: string
+  communityId: string,
+  res:NextApiResponse
 ) {
   try {
     connectToDB();
@@ -234,11 +241,11 @@ export async function removeUserFromCommunity(
       { $pull: { communities: communityIdObject._id } }
     );
 
-    return { success: true };
+    return res.status(200).json({success: true});
   } catch (error) {
     // Handle any errors
     console.error("Error removing user from community:", error);
-    throw error;
+    return res.status(500).json({ success: false, message: 'Failed to remove user in community' });
   }
 }
 
@@ -246,7 +253,8 @@ export async function updateCommunityInfo(
   communityId: string,
   name: string,
   username: string,
-  image: string
+  image: string,
+  res:NextApiResponse
 ) {
   try {
     connectToDB();
@@ -261,15 +269,15 @@ export async function updateCommunityInfo(
       throw new Error("Community not found");
     }
 
-    return updatedCommunity;
+    return res.status(200).json(updatedCommunity);
   } catch (error) {
     // Handle any errors
     console.error("Error updating community information:", error);
-    throw error;
+    return res.status(500).json({ success: false, message: 'Failed to update community' });
   }
 }
 
-export async function deleteCommunity(communityId: string) {
+export async function deleteCommunity(communityId: string, res: NextApiResponse) {
   try {
     connectToDB();
 
@@ -279,7 +287,7 @@ export async function deleteCommunity(communityId: string) {
     });
 
     if (!deletedCommunity) {
-      throw new Error("Community not found");
+      return res.status(404).json({ success: false, message: 'Community not found' });
     }
 
     // Delete all threads associated with the community
@@ -289,16 +297,23 @@ export async function deleteCommunity(communityId: string) {
     const communityUsers = await User.find({ communities: communityId });
 
     // Remove the community from the 'communities' array for each user
-    const updateUserPromises = communityUsers.map((user) => {
+    const updateUserPromises = communityUsers.map(async (user) => {
       user.communities.pull(communityId);
-      return user.save();
+      await user.save();
     });
 
     await Promise.all(updateUserPromises);
 
-    return deletedCommunity;
-  } catch (error) {
-    console.error("Error deleting community: ", error);
-    throw error;
+    return res.status(200).json({ success: true, message: 'Community deleted successfully' });
+  } catch (error: any) {
+    console.error("Error deleting community: ", error.message);
+    return res.status(500).json({ success: false, message: 'Failed to delete community' });
   }
 }
+
+
+
+
+
+
+

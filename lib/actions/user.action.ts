@@ -7,6 +7,7 @@ import exp from "constants";
 import { error } from "console";
 import { get } from "http";
 import Thread from "../models/thread.model";
+import { NextApiResponse } from "next";
 
 interface Params {
     userId: string,
@@ -14,7 +15,8 @@ interface Params {
     name:string,
     bio:string,
     image:string,
-    path: string
+    path: string,
+    res:NextApiResponse
 }
 
 export async function updateUser({
@@ -24,11 +26,12 @@ export async function updateUser({
     path,
     username,
     image,
+    res
   }: Params): Promise<void> {
     try {
       connectToDB();
   
-      await User.findOneAndUpdate(
+      const user = await User.findOneAndUpdate(
         { id: userId },
         {
           username: username.toLowerCase(),
@@ -42,40 +45,48 @@ export async function updateUser({
   
       if (path === "/profile/edit") {
         revalidatePath(path);
+        return res.status(201).json({ success: true, user });
       }
     } catch (error: any) {
-      throw new Error(`Failed to create/update user: ${error.message}`);
+      console.log(`Failed to create/update user: ${error.message}`);
+      return res.status(404).json({message:error.message})
     }
   }
 
-export async function fetchUser(userId : string){
-    try{
-        connectToDB()
-
-       return await User
-       .findOne({id: userId})
-    //    .populate({
-    //     path:'comminites',
-    //     model:'Community'
-    //    })
-    }catch(err: any){
-        throw new Error(`Failed to get the user: ${err.message}`)
+  export async function fetchUser(userId: string, res: NextApiResponse) {
+    try {
+      connectToDB();
+  
+      const user = await User.findOne({ id: userId });
+      // You might want to check if the user exists before proceeding
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Return a successful response with the fetched user data
+      return res.status(200).json({ success: true, user });
+    } catch (err: any) {
+      console.log(`Failed to get the user: ${err.message}`);
+      
+      // Return an error response
+      return res.status(500).json({ success: false, error: 'Failed to fetch the user' });
     }
-}
-
+  }
 
 export async function fetchUsers({
   userId,
   searchString="",
   pageNumber =1,
   pageSize=20,
-  sortBy="desc"
+  sortBy="desc",
+  res
 }: {
   userId: string;
   searchString?: string;
   pageNumber?: number;
   pageSize?: number;
   sortBy?: SortOrder;
+  res:NextApiResponse
 }) {
   try{
     connectToDB();
@@ -103,14 +114,16 @@ export async function fetchUsers({
     const totalUsersCount = await  User.countDocuments(query)
     const users = await usersQuery.exec()
     const isNext = totalUsersCount > skipAmmount + users.length
-    return {users,isNext}
+
+    return res.status(200).json({ success: true, users,isNext });
 
   }catch(error: any) {
-    throw new Error(`Failed to fetch the users: ${error.message}`)
+    console.log(`Failed to fetch the users: ${error.message}`)
+    return res.status(500).json({ success: false, error: 'Failed to fetch the user' });
   }
 }
 
-export async function getActivity(userId: string){
+export async function getActivity(userId: string,res:NextApiResponse){
   try{
     const userThreads = await Thread.find({author: userId})
     // Extracts child thread IDs from an array of user threads
@@ -130,10 +143,12 @@ export async function getActivity(userId: string){
       select:'name image _id'
     })
 
-    return replies
+
+    return res.status(200).json({ success: true, replies });
 
 
   }catch(error: any) {
-    throw new Error(`Failed to fetch activity: ${error.message}`)
+    console.log(`Failed to fetch activity: ${error.message}`)
+    return res.status(500).json({ success: false, error: 'Failed to getActivity' });
   }
 }
