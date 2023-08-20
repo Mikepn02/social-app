@@ -3,7 +3,7 @@ import { connectToDB } from "../mongoose"
 import Thread from "../models/thread.model"
 import User from "../models/user.model"
 import { revalidatePath } from "next/cache"
-import { NextApiResponse } from "next"
+
 
 interface Params {
     text: string,
@@ -32,7 +32,7 @@ export  async function createThread({text,author,communityId,path} : Params) {
    }
 }
 
-export async function fetchPosts(pageNumber=1,pageSize=20 , res:NextApiResponse){
+export async function fetchPosts(pageNumber=1,pageSize=20){
     connectToDB()
 
     const skipAmount = (pageNumber -1) * pageSize
