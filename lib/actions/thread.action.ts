@@ -53,8 +53,7 @@ export async function fetchPosts(pageNumber=1,pageSize=20 , res:NextApiResponse)
     const posts = await postsQuery.exec();
     const isNext = totalPostsCount > skipAmount + posts.length;
 
-   //  return {posts , isNext}
-    res.status(200).json({posts , isNext})
+    return {posts , isNext}
   }
 
 
