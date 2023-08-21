@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import { formatDateString } from "@/lib/utils";
 
 interface Props {
     id: string,
@@ -16,7 +17,7 @@ interface Props {
         name: string,
         image: string
     } | null,
-    createAt: string,
+    createdAt: string,
     comments: {
         author: {
             image: string
@@ -33,10 +34,11 @@ const ThreadCard = ({
     content,
     author,
     community,
-    createAt,
+    createdAt,
     comments,
     isComment
 }: Props) => {
+    console.log('Community:', community);
 
     return (
         <article className={`flex w-full flex-col rounded-xl ${
@@ -79,6 +81,26 @@ const ThreadCard = ({
                     </div>
                 </div>
             </div>
+
+            {!isComment && community && (
+        <Link
+          href={`/communities/${community.id}`}
+          className='mt-5 flex items-center'
+        >
+          <p className='text-subtle-medium text-gray-1'>
+            {formatDateString(createdAt)}
+            {community && ` - ${community.name} Community`}
+          </p>
+
+          <Image
+            src={community.image}
+            alt={community.name}
+            width={14}
+            height={14}
+            className='ml-1 rounded-full object-cover'
+          />
+        </Link>
+      )}
         </article>
     )
 
